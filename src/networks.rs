@@ -1,10 +1,8 @@
-use std::path::Path;
+use hmac::Hmac;
+use pbkdf2::pbkdf2;
+use sha1::Sha1;
 
-use crypto::hmac::Hmac;
-use crypto::pbkdf2::pbkdf2;
-use crypto::sha1::Sha1;
 use std::ffi::OsString;
-use std::ffi::OsStr;
 
 pub enum PSKSecurity {
     Password(String),
@@ -56,9 +54,8 @@ impl Network {
 
 pub fn compute_psk(ssid: &[u8], passphrase: &[u8]) -> [u8; 32] {
     let mut buffer = [0u8; 32];
-    let mut mac = Hmac::new(Sha1::new(), passphrase);
 
-    pbkdf2(&mut mac, ssid, 4096, &mut buffer);
+    pbkdf2::<Hmac<Sha1>>(passphrase, ssid, 4096, &mut buffer);
     buffer
 }
 

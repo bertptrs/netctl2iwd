@@ -5,5 +5,7 @@ authors = ["Bert Peters <bert@bertptrs.nl>"]
 edition = "2018"
 
 [dependencies]
-rust-crypto = "0.2"
+sha-1 = "0.8.1"
+hmac = "0.7.0"
+pbkdf2 = "0.3.0"
 hex = "0.3.2"
