@@ -2,8 +2,6 @@ use hmac::Hmac;
 use pbkdf2::pbkdf2;
 use sha1::Sha1;
 
-use std::ffi::OsString;
-
 pub enum PSKSecurity {
     Password(String),
     PSK(String),
@@ -32,7 +30,7 @@ impl Network {
     /// Compute the filename (not the dir) for this file.
     ///
     /// This function is based on storage_get_network_file_path in the iwd source code.
-    pub fn iwd_file_name(&self) -> OsString {
+    pub fn iwd_file_name(&self) -> String {
         let mut name = if self.name_is_safe() {
             self.ssid.clone()
         } else {
@@ -43,7 +41,7 @@ impl Network {
 
         name += self.security.get_extension();
 
-        OsString::from(name)
+        name
     }
 
     fn name_is_safe(&self) -> bool {
@@ -77,12 +75,12 @@ mod tests {
             ssid: "Leiden University".to_string(),
             security: Security::Open,
         };
-        assert_eq!(OsString::from("=4c656964656e20556e6976657273697479.open"), network.iwd_file_name());
+        assert_eq!("=4c656964656e20556e6976657273697479.open", network.iwd_file_name());
 
         let network = Network {
             ssid: "foo_network".to_string(),
             security: Security::PSK(PSKSecurity::Password("bar_password".to_string())),
         };
-        assert_eq!(OsString::from("foo_network.psk"), network.iwd_file_name())
+        assert_eq!("foo_network.psk", network.iwd_file_name())
     }
 }
