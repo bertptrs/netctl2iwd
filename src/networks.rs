@@ -1,4 +1,5 @@
 use hmac::Hmac;
+use ini::Ini;
 use pbkdf2::pbkdf2;
 use sha1::Sha1;
 
@@ -48,6 +49,25 @@ impl Network {
         self.ssid.chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
     }
+
+    pub fn write_config(&self, config: &mut Ini) {
+        match &self.security {
+            Security::Open => {},
+
+            Security::PSK(security) => {
+                let mut section = config.with_section(Some("Security".to_owned()));
+
+                match &security {
+                    PSKSecurity::PSK(psk) => section.set("PreSharedKey", psk.to_owned()),
+                    PSKSecurity::Password(passphrase) => {
+                        let psk = compute_psk(self.ssid.as_bytes(), passphrase.as_bytes());
+                        section.set("Passphrase", passphrase.to_owned())
+                            .set("PreSharedKey", hex::encode(&psk))
+                    }
+                };
+            }
+        };
+    }
 }
 
 pub fn compute_psk(ssid: &[u8], passphrase: &[u8]) -> [u8; 32] {
@@ -61,12 +81,21 @@ pub fn compute_psk(ssid: &[u8], passphrase: &[u8]) -> [u8; 32] {
 mod tests {
     use super::*;
 
+    const FOO_PASSWORD: &str = "bar_password";
+    const FOO_PSK: &str = "90b193aaec1446630aeb1d1c24191f580e03e3e4d592b5b682b157a04fa26956";
+
+    fn foo_network() -> Network {
+        Network {
+            ssid: "foo_network".to_string(),
+            security: Security::PSK(PSKSecurity::Password(FOO_PASSWORD.to_owned())),
+        }
+    }
+
     #[test]
     fn test_compute_psk() {
-        let result = compute_psk(b"foonetwork", b"foopassphrase");
-        let correct = "843446d8b163207e094b45be552f7180663daa729126778633dbc22ce2ebd1ad";
+        let result = compute_psk(b"foo_network", FOO_PASSWORD.as_bytes());
         let result_hex = hex::encode(result);
-        assert_eq!(correct, result_hex);
+        assert_eq!(FOO_PSK, result_hex);
     }
 
     #[test]
@@ -76,11 +105,15 @@ mod tests {
             security: Security::Open,
         };
         assert_eq!("=4c656964656e20556e6976657273697479.open", network.iwd_file_name());
+        assert_eq!("foo_network.psk", foo_network().iwd_file_name())
+    }
 
-        let network = Network {
-            ssid: "foo_network".to_string(),
-            security: Security::PSK(PSKSecurity::Password("bar_password".to_string())),
-        };
-        assert_eq!("foo_network.psk", network.iwd_file_name())
+    #[test]
+    fn test_write_config() {
+
+        let mut config = Ini::new();
+        foo_network().write_config(&mut config);
+        assert_eq!(config.get_from(Some("Security"), "Passphrase"), Some(FOO_PASSWORD));
+        assert_eq!(config.get_from(Some("Security"), "PreSharedKey"), Some(FOO_PSK));
     }
 }
