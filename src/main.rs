@@ -14,6 +14,7 @@ fn main() {
     let matches = app_from_crate!()
         .arg(Arg::with_name("input")
             .conflicts_with("dir")
+            .required(true)
             .help("Profile files to process")
             .multiple(true))
         .arg(Arg::with_name("output")
@@ -22,9 +23,10 @@ fn main() {
             .default_value(DEFAULT_INSTALL_PATH))
         .arg(Arg::with_name("dir")
             .help("Directory of profiles to process")
-            .long("input-dir")
-            .short("dir")
             .conflicts_with("input")
+            .long("input-dir")
+            .short("i")
+            .required(true)
             .takes_value(true))
         .get_matches();
 
@@ -35,7 +37,6 @@ fn main() {
             println!("Reading profile {}", file);
         }
     } else {
-        eprintln!("Need to specify input files or input dir.");
-        exit(1);
+        unreachable!("clap should handle this");
     }
 }
