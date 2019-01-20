@@ -3,6 +3,8 @@ name = "netctl2iwd"
 version = "0.1.0"
 authors = ["Bert Peters <bert@bertptrs.nl>"]
 edition = "2018"
+description = "Convert netctl profiles to iwd configurations."
+license-file = "LICENSE"
 
 [dependencies]
 sha-1 = "0.8.1"
@@ -10,3 +12,4 @@ hmac = "0.7.0"
 pbkdf2 = { version = "0.3.0", default-features = false }
 hex = "0.3.2"
 rust-ini = "0.13.0"
+clap = "2.32.0"
