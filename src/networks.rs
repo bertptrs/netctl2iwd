@@ -3,11 +3,13 @@ use ini::Ini;
 use pbkdf2::pbkdf2;
 use sha1::Sha1;
 
+#[derive(Eq, PartialEq, Debug)]
 pub enum PSKSecurity {
     Password(String),
     PSK(String),
 }
 
+#[derive(Eq, PartialEq, Debug)]
 pub enum Security {
     Open,
     PSK(PSKSecurity),
@@ -22,12 +24,20 @@ impl Security {
     }
 }
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct Network {
     ssid: String,
     security: Security,
 }
 
 impl Network {
+    pub fn new(ssid: String, security: Security) -> Network {
+        Network {
+            ssid,
+            security,
+        }
+    }
+
     /// Compute the filename (not the dir) for this file.
     ///
     /// This function is based on storage_get_network_file_path in the iwd source code.
@@ -52,7 +62,7 @@ impl Network {
 
     pub fn write_config(&self, config: &mut Ini) {
         match &self.security {
-            Security::Open => {},
+            Security::Open => {}
 
             Security::PSK(security) => {
                 let mut section = config.with_section(Some("Security".to_owned()));
@@ -85,10 +95,8 @@ mod tests {
     const FOO_PSK: &str = "90b193aaec1446630aeb1d1c24191f580e03e3e4d592b5b682b157a04fa26956";
 
     fn foo_network() -> Network {
-        Network {
-            ssid: "foo_network".to_string(),
-            security: Security::PSK(PSKSecurity::Password(FOO_PASSWORD.to_owned())),
-        }
+        Network::new("foo_network".to_owned(),
+                     Security::PSK(PSKSecurity::Password(FOO_PASSWORD.to_owned())))
     }
 
     #[test]
@@ -110,7 +118,6 @@ mod tests {
 
     #[test]
     fn test_write_config() {
-
         let mut config = Ini::new();
         foo_network().write_config(&mut config);
         assert_eq!(config.get_from(Some("Security"), "Passphrase"), Some(FOO_PASSWORD));

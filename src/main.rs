@@ -1,10 +1,9 @@
 #[macro_use]
 extern crate clap;
 
-use std::process::exit;
-
 use clap::Arg;
 
+mod convert;
 mod networks;
 
 /// Default install location of network files.
