@@ -1,5 +1,14 @@
 use std::collections::HashMap;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::fs::Permissions;
+use std::io;
+use std::io::ErrorKind;
 use std::io::Read;
+use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::string::ParseError;
 
 use ini::Ini;
 
@@ -14,6 +23,8 @@ pub enum ConversionError {
     MissingKeys,
     MissingSSID,
     Unsupported,
+    PermissionDenied,
+    FileExists,
     OSError,
 }
 
@@ -21,6 +32,51 @@ impl From<ini::ini::Error> for ConversionError {
     fn from(ini_error: ini::ini::Error) -> Self {
         ConversionError::ParseError(ini_error.to_string())
     }
+}
+
+impl From<io::Error> for ConversionError {
+    fn from(io_error: io::Error) -> Self {
+        match io_error.kind() {
+            ErrorKind::PermissionDenied => ConversionError::PermissionDenied,
+            ErrorKind::AlreadyExists => ConversionError::FileExists,
+            _ => panic!("Unhandled io error: {}", &io_error),
+        }
+    }
+}
+
+impl From<ParseError> for ConversionError {
+    fn from(_: ParseError) -> Self {
+        ConversionError::OSError
+    }
+}
+
+pub fn convert_files<'a>(input: impl Iterator<Item=&'a str>, output_dir: &str) {
+    for file in input {
+        match convert(file, output_dir) {
+            Ok(_) => println!("Successfully converted {}", file),
+            Err(error) => println!("Failed to convert {}: {:?}", file, error),
+        }
+    }
+}
+
+fn convert(input: &str, output_dir: &str) -> Result<(), ConversionError> {
+    let mut input = File::open(input)?;
+    let network = parse_network(&mut input)?;
+
+    let mut output_path = PathBuf::from_str(output_dir)?;
+    output_path.push(network.iwd_file_name());
+
+    let mut config = Ini::new();
+    network.write_config(&mut config);
+
+    let mut output = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(output_path.as_path())?;
+    output.set_permissions(Permissions::from_mode(0o600))?;
+    config.write_to(&mut output)?;
+
+    Ok(())
 }
 
 /// Get a string according to the netctl quoting rules.

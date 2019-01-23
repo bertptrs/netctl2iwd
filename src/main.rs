@@ -2,6 +2,8 @@
 extern crate clap;
 
 use clap::Arg;
+use clap::ArgMatches;
+use crate::convert::convert_files;
 
 mod convert;
 mod networks;
@@ -10,7 +12,7 @@ mod networks;
 const DEFAULT_INSTALL_PATH: &str = "/var/lib/iwd";
 
 fn main() {
-    let matches = app_from_crate!()
+    let matches: ArgMatches = app_from_crate!()
         .arg(Arg::with_name("input")
             .conflicts_with("dir")
             .required(true)
@@ -30,11 +32,10 @@ fn main() {
         .get_matches();
 
     if let Some(dir) = matches.value_of("dir") {
+        // TODO: handle this case.
         println!("Reading profiles from {}", dir);
     } else if let Some(files) = matches.values_of("input") {
-        for file in files {
-            println!("Reading profile {}", file);
-        }
+        convert_files(files, matches.value_of("output").unwrap());
     } else {
         unreachable!("clap should handle this");
     }
