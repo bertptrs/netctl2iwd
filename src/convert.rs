@@ -74,6 +74,16 @@ impl From<ParseError> for ConversionError {
     }
 }
 
+/// Convert an (optional) DirEntry to a full path.
+///
+/// # Arguments
+///
+/// * `base` The relative path in which the entry can be found
+/// * `entry` An result providing an entry.
+///
+/// # Return value
+///
+/// If the entry is valid and is a file, then return the full path. Otherwise return None.
 fn map_dirent(base: &Path, entry: io::Result<DirEntry>) -> Option<String> {
     if entry.is_err() {
         return None;
@@ -89,14 +99,15 @@ fn map_dirent(base: &Path, entry: io::Result<DirEntry>) -> Option<String> {
     buf.to_str().map_or(None, |s| Some(s.to_owned()))
 }
 
+/// Convert a directory of profiles.
 pub fn convert_dir(input_dir: &str, output_dir: &str) {
     let base_path = Path::new(input_dir);
     let reader = read_dir(base_path);
     match reader {
         Ok(reader) => {
-            let names: Vec<_> = reader.filter_map(|f| map_dirent(base_path, f)).collect();
-            convert_files(names.iter().map(|s| s.as_str()), output_dir);
-        },
+            let iter = reader.filter_map(|f| map_dirent(base_path, f));
+            convert_files(iter, output_dir);
+        }
 
         Err(e) => {
             eprintln!("Failed to open {} for reading: {}", input_dir, e);
@@ -105,16 +116,18 @@ pub fn convert_dir(input_dir: &str, output_dir: &str) {
     }
 }
 
-pub fn convert_files<'a>(input: impl Iterator<Item=&'a str>, output_dir: &str) {
+/// Convert an iterable of profiles.
+pub fn convert_files<S>(input: impl Iterator<Item=S>, output_dir: &str)
+    where S: AsRef<Path> + Display {
     for file in input {
-        match convert(file, output_dir) {
+        match convert(file.as_ref(), output_dir) {
             Ok(_) => println!("Successfully converted {}", file),
             Err(error) => println!("Failed to convert {}: {}", file, error),
         }
     }
 }
 
-fn convert(input: &str, output_dir: &str) -> Result<(), ConversionError> {
+fn convert(input: &Path, output_dir: &str) -> Result<(), ConversionError> {
     let mut input = File::open(input)?;
     let network = parse_network(&mut input)?;
 
