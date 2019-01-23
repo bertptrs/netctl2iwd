@@ -19,6 +19,7 @@ use crate::networks::PSKSecurity;
 use crate::networks::Security;
 use std::fmt;
 
+#[derive(Debug)]
 pub enum ConversionError {
     ParseError(String),
     NotWireless,
