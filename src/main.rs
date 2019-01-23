@@ -3,6 +3,8 @@ extern crate clap;
 
 use clap::Arg;
 use clap::ArgMatches;
+
+use crate::convert::convert_dir;
 use crate::convert::convert_files;
 
 mod convert;
@@ -31,11 +33,12 @@ fn main() {
             .takes_value(true))
         .get_matches();
 
+    let output = matches.value_of("output").unwrap();
+
     if let Some(dir) = matches.value_of("dir") {
-        // TODO: handle this case.
-        println!("Reading profiles from {}", dir);
+        convert_dir(dir, output);
     } else if let Some(files) = matches.values_of("input") {
-        convert_files(files, matches.value_of("output").unwrap());
+        convert_files(files, output);
     } else {
         unreachable!("clap should handle this");
     }

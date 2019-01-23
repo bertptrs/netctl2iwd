@@ -1,14 +1,19 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::fs::DirEntry;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::fs::Permissions;
+use std::fs::read_dir;
 use std::io;
 use std::io::ErrorKind;
 use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 use std::path::PathBuf;
+use std::process::exit;
 use std::str::FromStr;
 use std::string::ParseError;
 
@@ -17,7 +22,6 @@ use ini::Ini;
 use crate::networks::Network;
 use crate::networks::PSKSecurity;
 use crate::networks::Security;
-use std::fmt;
 
 #[derive(Debug)]
 pub enum ConversionError {
@@ -41,7 +45,7 @@ impl Display for ConversionError {
             MissingKeys => write!(f, "Key information missing"),
             MissingSSID => write!(f, "SSID missing"),
             Unsupported => write!(f, "Unsupported security type"),
-            PermissionDenied => write!(f, "Unable to open file"),
+            PermissionDenied => write!(f, "Permission denied"),
             FileExists => write!(f, "File exists, refusing to overwrite"),
             OSError => write!(f, "Unknown error"),
         }
@@ -67,6 +71,37 @@ impl From<io::Error> for ConversionError {
 impl From<ParseError> for ConversionError {
     fn from(_: ParseError) -> Self {
         ConversionError::OSError
+    }
+}
+
+fn map_dirent(base: &Path, entry: io::Result<DirEntry>) -> Option<String> {
+    if entry.is_err() {
+        return None;
+    }
+    let entry = entry.unwrap();
+    if !entry.file_type().unwrap().is_file() {
+        return None;
+    }
+
+    let mut buf = PathBuf::from(base);
+    buf.push(entry.file_name());
+
+    buf.to_str().map_or(None, |s| Some(s.to_owned()))
+}
+
+pub fn convert_dir(input_dir: &str, output_dir: &str) {
+    let base_path = Path::new(input_dir);
+    let reader = read_dir(base_path);
+    match reader {
+        Ok(reader) => {
+            let names: Vec<_> = reader.filter_map(|f| map_dirent(base_path, f)).collect();
+            convert_files(names.iter().map(|s| s.as_str()), output_dir);
+        },
+
+        Err(e) => {
+            eprintln!("Failed to open {} for reading: {}", input_dir, e);
+            exit(e.raw_os_error().unwrap_or(1))
+        }
     }
 }
 
