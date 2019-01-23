@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fmt::Display;
+use std::fmt::Formatter;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::fs::Permissions;
@@ -15,8 +17,8 @@ use ini::Ini;
 use crate::networks::Network;
 use crate::networks::PSKSecurity;
 use crate::networks::Security;
+use std::fmt;
 
-#[derive(Debug)]
 pub enum ConversionError {
     ParseError(String),
     NotWireless,
@@ -26,6 +28,23 @@ pub enum ConversionError {
     PermissionDenied,
     FileExists,
     OSError,
+}
+
+impl Display for ConversionError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        use self::ConversionError::*;
+
+        match self {
+            ParseError(value) => write!(f, "Unable to parse profile: {}", value),
+            NotWireless => write!(f, "Not a wireless profile"),
+            MissingKeys => write!(f, "Key information missing"),
+            MissingSSID => write!(f, "SSID missing"),
+            Unsupported => write!(f, "Unsupported security type"),
+            PermissionDenied => write!(f, "Unable to open file"),
+            FileExists => write!(f, "File exists, refusing to overwrite"),
+            OSError => write!(f, "Unknown error"),
+        }
+    }
 }
 
 impl From<ini::ini::Error> for ConversionError {
@@ -39,7 +58,7 @@ impl From<io::Error> for ConversionError {
         match io_error.kind() {
             ErrorKind::PermissionDenied => ConversionError::PermissionDenied,
             ErrorKind::AlreadyExists => ConversionError::FileExists,
-            _ => panic!("Unhandled io error: {}", &io_error),
+            _ => ConversionError::OSError,
         }
     }
 }
@@ -54,7 +73,7 @@ pub fn convert_files<'a>(input: impl Iterator<Item=&'a str>, output_dir: &str) {
     for file in input {
         match convert(file, output_dir) {
             Ok(_) => println!("Successfully converted {}", file),
-            Err(error) => println!("Failed to convert {}: {:?}", file, error),
+            Err(error) => println!("Failed to convert {}: {}", file, error),
         }
     }
 }
