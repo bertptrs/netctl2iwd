@@ -1,9 +1,10 @@
 [package]
 name = "netctl2iwd"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Bert Peters <bert@bertptrs.nl>"]
 edition = "2018"
 description = "Convert netctl profiles to iwd configurations."
+keywords = ["netctl", "wireless", "iwd"]
 license = "MIT"
 repository = "https://github.com/bertptrs/netctl2iwd"
 readme = "README.md"
@@ -19,3 +20,4 @@ clap = "2.32.0"
 [badges]
 
 travis-ci = { repository = "bertptrs/netctl2iwd", branch = "master" }
+maintenance = { status = "passively-maintained" }
