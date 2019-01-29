@@ -30,6 +30,10 @@ pub struct Network {
     security: Security,
 }
 
+fn is_safe_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || "-_ ".contains(c)
+}
+
 impl Network {
     pub fn new(ssid: String, security: Security) -> Network {
         Network {
@@ -42,7 +46,7 @@ impl Network {
     ///
     /// This function is based on storage_get_network_file_path in the iwd source code.
     pub fn iwd_file_name(&self) -> String {
-        let mut name = if self.name_is_safe() {
+        let mut name = if self.ssid.chars().all(is_safe_char) {
             self.ssid.clone()
         } else {
             let mut buf = String::from("=");
@@ -53,11 +57,6 @@ impl Network {
         name += self.security.get_extension();
 
         name
-    }
-
-    fn name_is_safe(&self) -> bool {
-        self.ssid.chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
     }
 
     pub fn write_config(&self, config: &mut Ini) {
@@ -112,8 +111,13 @@ mod tests {
             ssid: "Leiden University".to_string(),
             security: Security::Open,
         };
-        assert_eq!("=4c656964656e20556e6976657273697479.open", network.iwd_file_name());
-        assert_eq!("foo_network.psk", foo_network().iwd_file_name())
+        assert_eq!("Leiden University.open", network.iwd_file_name());
+        assert_eq!("foo_network.psk", foo_network().iwd_file_name());
+        let network = Network {
+            ssid: "With illegal characters?".to_string(),
+            security: Security::Open,
+        };
+        assert_eq!("=5769746820696c6c6567616c20636861726163746572733f.open", network.iwd_file_name());
     }
 
     #[test]
